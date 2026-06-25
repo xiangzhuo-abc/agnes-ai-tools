@@ -1,0 +1,7 @@
+{
+  "api_key": "sk-YOUR_API_KEY_HERE",
+  "output_dir": "D:\\Desktop\\Agnes生成",
+  "image_size": "1024x1024",
+  "video_duration": 5,
+  "video_fps": 24
+}

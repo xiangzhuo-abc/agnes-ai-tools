@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# 敏感：永远不要提交含真实 API Key 的配置文件
+config.json
+*.secret.json
+
+# 临时文件
+*.log
+*.tmp
