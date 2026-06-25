@@ -1,0 +1,67 @@
+name: 语法检查
+
+on:
+  push:
+    paths:
+      - '**.py'
+      - '**.ps1'
+      - '**.json'
+  pull_request:
+    paths:
+      - '**.py'
+      - '**.ps1'
+      - '**.json'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Python 语法检查 (AST)
+        run: |
+          python -c "import ast; ast.parse(open('agnes-gui.py','r',encoding='utf-8').read()); print('✅ Python 语法正确')"
+
+      - name: PowerShell 语法检查 (PSParser)
+        shell: pwsh
+        run: |
+          $code = Get-Content 'agnes-tools.ps1' -Raw
+          $errors = $null
+          $null = [System.Management.Automation.Language.Parser]::ParseInput($code, [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+          Write-Host "✅ PowerShell 语法正确"
+
+      - name: JSON 格式检查
+        run: |
+          python -c "import json; json.load(open('config.example.json','r',encoding='utf-8')); print('✅ JSON 格式正确')"
+
+      - name: 安全检查 — 无真实凭据泄露
+        shell: pwsh
+        run: |
+          $patterns = @(
+            'sk-[a-zA-Z0-9_\-]{30,}',
+            'ghp_[a-zA-Z0-9]{30,}',
+            'github_pat_[a-zA-Z0-9_]{30,}'
+          )
+          $files = Get-ChildItem -Recurse -Include *.py,*.ps1,*.md,*.json -Exclude .git
+          $found = $false
+          foreach ($f in $files) {
+            $content = Get-Content $f.FullName -Raw
+            foreach ($p in $patterns) {
+              if ($content -match $p) {
+                # 排除占位符
+                if ($Matches[0] -match 'YOUR_API_KEY|你的|占位|placeholder|example') { continue }
+                Write-Error "⚠️ 疑似凭据泄露: $($f.Name) 中检测到 $($Matches[0].Substring(0,[Math]::Min(12,$Matches[0].Length)))..."
+                $found = $true
+              }
+            }
+          }
+          if ($found) { exit 1 } else { Write-Host "✅ 无凭据泄露" }
